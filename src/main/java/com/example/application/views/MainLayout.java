@@ -22,7 +22,8 @@ import com.vaadin.flow.router.PageTitle;
 import com.example.application.views.helloworld.HelloWorldView;
 import com.example.application.views.about.AboutView;
 
-import com.vaadin.flow.server.VaadinService;
+import com.vaadin.flow.server.*;
+import com.vaadin.flow.shared.Registration;
 
 /**
  * The main view is a top-level placeholder for other views.
@@ -59,15 +60,6 @@ public class MainLayout extends AppLayout {
     private H1 viewTitle;
 
     public MainLayout() {
-
-        VaadinService.getCurrent().addSessionInitListener(event -> {
-            logger.log(Level.SEVERE, "Session "+System.identityHashCode(event.getSession())+" initialized.");
-        });
-
-        VaadinService.getCurrent().addSessionDestroyListener(event -> {
-            logger.log(Level.SEVERE, "Session "+System.identityHashCode(event.getSession())+" destroyed.");
-        });
-
         setPrimarySection(Section.DRAWER);
         addToNavbar(true, createHeaderContent());
         addToDrawer(createDrawerContent());

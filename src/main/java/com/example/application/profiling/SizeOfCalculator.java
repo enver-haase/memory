@@ -108,14 +108,23 @@ public class SizeOfCalculator {
     private class FilteringVisitorListener implements VisitorListener {
         public void visited(Object object, long size) {
 
-            String className = object.getClass().getName();
+            final String className = object.getClass().getName();
             logger.log(Level.FINEST, "Testing an instance of class "+object.getClass().getName());
             for (String prefix : SizeOfCalculator.this.prefixes) {
                 if (className.startsWith(prefix)) {
                     ObjectInstanceSize ois = new ObjSize(getDescription(object), sizeOf.deepSizeOf(object));
                     List<ObjectInstanceSize> others = SizeOfCalculator.this.classnameToInstanceSizes.computeIfAbsent(className, k -> new ArrayList<>());
                     others.add(ois);
-                    logger.log(Level.FINER, "Found an instance of class "+object.getClass().getName());
+                    logger.log(Level.FINER, "Found an instance of class "+className);
+
+                    if (className.endsWith("View")){
+                        logger.log(Level.INFO, "Found a ...View instance: "+getDescription(object));
+                    }
+
+                    if (className.equals("com.vaadin.flow.component.UI")){
+                        logger.log(Level.INFO, "Found a Vaadin UI instance: "+getDescription(object));
+                    }
+
                     break;
                 }
             }
