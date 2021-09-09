@@ -2,15 +2,13 @@ package com.example.application.views;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.ComponentUtil;
-import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Nav;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.html.Footer;
@@ -18,26 +16,20 @@ import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Header;
-import com.vaadin.flow.component.orderedlayout.FlexComponent;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.component.tabs.Tab;
-import com.vaadin.flow.component.tabs.Tabs;
-import com.vaadin.flow.component.tabs.TabsVariant;
+
 import com.vaadin.flow.router.RouterLink;
-import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.PageTitle;
-import com.example.application.views.MainLayout;
 import com.example.application.views.helloworld.HelloWorldView;
 import com.example.application.views.about.AboutView;
-import com.vaadin.flow.component.avatar.Avatar;
+
+import com.vaadin.flow.server.VaadinService;
 
 /**
  * The main view is a top-level placeholder for other views.
  */
 @PageTitle("Main")
 public class MainLayout extends AppLayout {
-
+    Logger logger = Logger.getLogger(MainLayout.class.getName());
     public static class MenuItemInfo {
 
         private String text;
@@ -67,6 +59,15 @@ public class MainLayout extends AppLayout {
     private H1 viewTitle;
 
     public MainLayout() {
+
+        VaadinService.getCurrent().addSessionInitListener(event -> {
+            logger.log(Level.SEVERE, "Session "+System.identityHashCode(event.getSession())+" initialized.");
+        });
+
+        VaadinService.getCurrent().addSessionDestroyListener(event -> {
+            logger.log(Level.SEVERE, "Session "+System.identityHashCode(event.getSession())+" destroyed.");
+        });
+
         setPrimarySection(Section.DRAWER);
         addToNavbar(true, createHeaderContent());
         addToDrawer(createDrawerContent());
