@@ -1,5 +1,6 @@
 package com.example.application;
 
+import com.example.application.profiling.ObjDescription;
 import com.vaadin.flow.server.ServiceInitEvent;
 import com.vaadin.flow.server.VaadinServiceInitListener;
 
@@ -14,10 +15,10 @@ public class ApplicationServiceInitListener
     @Override
     public void serviceInit(ServiceInitEvent event) {
         event.getSource().addSessionInitListener( sessionInitEvent -> {
-            logger.log(Level.WARNING, "Session "+System.identityHashCode(sessionInitEvent.getSession())+" initialized.");
+            logger.log(Level.WARNING, "Session "+ObjDescription.getDescription(sessionInitEvent.getSession())+" initialized.");
         });
         event.getSource().addSessionDestroyListener( sessionDestroyEvent -> {
-            logger.log(Level.WARNING, "Session "+System.identityHashCode(sessionDestroyEvent.getSession())+" destroyed.");
+            logger.log(Level.WARNING, "Session "+ ObjDescription.getDescription(sessionDestroyEvent.getSession())+" destroyed.");
         });
     }
 

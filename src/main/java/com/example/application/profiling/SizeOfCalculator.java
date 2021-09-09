@@ -1,14 +1,16 @@
 package com.example.application.profiling;
 
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
+import com.vaadin.flow.server.VaadinSession;
 import org.ehcache.sizeof.SizeOf;
 import org.ehcache.sizeof.VisitorListener;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static com.example.application.profiling.ObjDescription.getDescription;
 
 public class SizeOfCalculator {
 
@@ -117,23 +119,36 @@ public class SizeOfCalculator {
                     others.add(ois);
                     logger.log(Level.FINER, "Found an instance of class "+className);
 
-                    if (className.endsWith("View")){
-                        logger.log(Level.INFO, "Found a ...View instance: "+getDescription(object));
+
+                    if (object instanceof Component){
+                        Component component = (Component) object;
+                        Optional<UI> ui = component.getUI();
+                        final String uiDesc;
+                        uiDesc = ui.map(ObjDescription::getDescription).orElse("(not attached to a UI)");
+
+                        final VaadinSession session;
+                        session = ui.map(UI::getSession).orElse(null);
+                        String vsDesc = (session == null? "(not attached to a VaadinSession)" : getDescription(session));
+
+                        logger.log(Level.FINE, "Found a Component instance: "+getDescription(object)+", UI: "+uiDesc+", VaadinSession: "+vsDesc);
                     }
 
-                    if (className.equals("com.vaadin.flow.component.UI")){
-                        logger.log(Level.INFO, "Found a Vaadin UI instance: "+getDescription(object));
-                    }
-
-                    break;
+                    //break;
+                    return; // not break: if we printed the UI as a component, that's sufficient
                 }
+            }
+
+            if (object instanceof UI){
+                UI ui = (UI) object;
+                final VaadinSession session;
+                session = ui.getSession();
+                String vsDesc = (session == null? "(not attached to a VaadinSession)" : getDescription(ui.getSession()));
+                logger.log(Level.WARNING, "Found a Vaadin UI instance outside your class name prefixes, suggest you add this: "+getDescription(object)+", Session: "+vsDesc);
             }
         }
     }
 
-    private static String getDescription(Object o) {
-        return o.getClass().getName() + "@" + System.identityHashCode(o);
-    }
+
 
 
     public static ClassTotalSize[] calculateDeepSizesOf(Object rootRef, String... fqClassnamePrefixes) {

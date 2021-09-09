@@ -35,10 +35,13 @@ public class HelloWorldView extends HorizontalLayout {
         logMemDump.setDisableOnClick(true);
         logMemDump.addClickListener(e -> {
             System.gc();
-            SizeOfCalculator.ClassTotalSize[] totals = SizeOfCalculator.calculateDeepSizesOf(VaadinSession.getCurrent(), "com.example.application.view", "com.vaadin.flow.component.UI");
+            SizeOfCalculator.ClassTotalSize[] totals = SizeOfCalculator.calculateDeepSizesOf(VaadinSession.getCurrent(), "com.example.application.view");
             logger.log(Level.INFO, "Memory footprint:");
             for (SizeOfCalculator.ClassTotalSize total : totals) {
                 logger.log(Level.INFO, "Class "+total.getClassName()+" x"+total.getObjectInstanceSizes().length+" instances, total memory: "+total.getTotalSize() );
+                for (SizeOfCalculator.ObjectInstanceSize ois : total.getObjectInstanceSizes()){
+                    logger.log(Level.INFO, "---Instance "+ois.getDescription()+", size "+ois.getDeepSize());
+                }
             }
             logMemDump.setEnabled(true);
         });
