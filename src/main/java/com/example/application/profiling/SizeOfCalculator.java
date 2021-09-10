@@ -35,19 +35,21 @@ public class SizeOfCalculator {
 
     public interface ObjectInstanceSize extends Comparable<ObjectInstanceSize> {
         String getDescription();
-
         long getDeepSize();
     }
 
-    public interface ClassTotalSize extends Comparable<ClassTotalSize> {
+    public interface ClassStatistics extends Comparable<ClassStatistics> {
         String getClassName();
-
-        long getTotalSize();
-
+        long getCumulatedSize();
         ObjectInstanceSize[] getObjectInstanceSizes();
     }
 
-    private static class ClsSize implements ClassTotalSize {
+    public interface DeepSize {
+        long getDeepSize();
+        ClassStatistics[] getClassStatisticss();
+    }
+
+    private static class ClsSize implements ClassStatistics {
         private final String className;
         private final ObjectInstanceSize[] objectInstanceSizes;
 
@@ -62,7 +64,7 @@ public class SizeOfCalculator {
         }
 
         @Override
-        public long getTotalSize() {
+        public long getCumulatedSize() {
             long retVal = 0;
             for (ObjectInstanceSize ois : objectInstanceSizes) {
                 retVal += ois.getDeepSize();
@@ -76,18 +78,18 @@ public class SizeOfCalculator {
         }
 
         @Override
-        public int compareTo(ClassTotalSize o) {
-            return Long.compare(this.getTotalSize(), o.getTotalSize());
+        public int compareTo(ClassStatistics o) {
+            return Long.compare(this.getCumulatedSize(), o.getCumulatedSize());
         }
     }
 
     private static class ObjSize implements ObjectInstanceSize {
         private final String desc;
-        private final long dSize;
+        private final long size;
 
-        ObjSize(String description, long deepSize) {
+        ObjSize(String description, long size) {
             this.desc = description;
-            this.dSize = deepSize;
+            this.size = size;
         }
 
         @Override
@@ -97,12 +99,12 @@ public class SizeOfCalculator {
 
         @Override
         public long getDeepSize() {
-            return dSize;
+            return size;
         }
 
         @Override
         public int compareTo(ObjectInstanceSize o) {
-            return Long.compare(dSize, o.getDeepSize());
+            return Long.compare(size, o.getDeepSize());
         }
     }
 
@@ -114,7 +116,14 @@ public class SizeOfCalculator {
             logger.log(Level.FINEST, "Testing an instance of class "+object.getClass().getName());
             for (String prefix : SizeOfCalculator.this.prefixes) {
                 if (className.startsWith(prefix)) {
-                    ObjectInstanceSize ois = new ObjSize(getDescription(object), sizeOf.deepSizeOf(object));
+                    // deep size is problematic as the internal BFS also crawls the graph 'upward' from a root object,
+                    // as that graph is not a tree in many cases.
+                    // This could maybe be fixed by applying a proper "SizeOfFilter" which needs to be experimentally
+                    // reached (must be so that e.g. a Vaadin UI would not be crawled upwards to its Vaadin Session,
+                    // in order to not read all the other Vaadin UIs, too -- assuming one would want to measure only
+                    // the size of one UI.
+                    // We use shallow size for the time being.
+                    ObjectInstanceSize ois = new ObjSize(getDescription(object), /*sizeOf.deepSizeOf(object)*/ size);
                     List<ObjectInstanceSize> others = SizeOfCalculator.this.classnameToInstanceSizes.computeIfAbsent(className, k -> new ArrayList<>());
                     others.add(ois);
                     logger.log(Level.FINER, "Found an instance of class "+className);
@@ -143,33 +152,51 @@ public class SizeOfCalculator {
                 final VaadinSession session;
                 session = ui.getSession();
                 String vsDesc = (session == null? "(not attached to a VaadinSession)" : getDescription(ui.getSession()));
-                logger.log(Level.WARNING, "Found a Vaadin UI instance outside your class name prefixes, suggest you add this: "+getDescription(object)+", Session: "+vsDesc);
+                logger.log(Level.WARNING, "Found a Vaadin UI instance "+getDescription(object)+" outside your class name prefixes, suggest you add this: "+object.getClass().getName()+", Session: "+vsDesc);
+            }
+
+            if (object instanceof VaadinSession){
+                logger.log(Level.WARNING, "Found a VaadinSession instance "+getDescription(object)+" outside your class name prefixes, suggest you add this: "+object.getClass().getName());
             }
         }
     }
 
-
-
-
-    public static ClassTotalSize[] calculateDeepSizesOf(Object rootRef, String... fqClassnamePrefixes) {
-        return new SizeOfCalculator(rootRef, fqClassnamePrefixes).calc();
+    /**
+     *
+     * @param rootRef
+     * @param fullyQualifiedClassnamePrefixes
+     * @return
+     */
+    public static DeepSize calculateSizesOf(Object rootRef, String... fullyQualifiedClassnamePrefixes) {
+        return new SizeOfCalculator(rootRef, fullyQualifiedClassnamePrefixes).calc();
     }
 
-    private ClassTotalSize[] calc() {
-        sizeOf.deepSizeOf(filteringVisitorListener, this.rootRef);
+    private DeepSize calc() {
+        final long deepSize = sizeOf.deepSizeOf(filteringVisitorListener, this.rootRef);
 
-        ArrayList<ClassTotalSize> classTotalSizes = new ArrayList<>();
+        ArrayList<ClassStatistics> classStatistics = new ArrayList<>();
         classnameToInstanceSizes.forEach((className, objectInstanceSizes) -> {
             Collections.sort(objectInstanceSizes); // sort
             Collections.reverse(objectInstanceSizes); // sort
 
-            ClassTotalSize cts = new ClsSize(className, objectInstanceSizes.toArray(new ObjectInstanceSize[0]));
-            classTotalSizes.add(cts);
+            ClassStatistics cts = new ClsSize(className, objectInstanceSizes.toArray(new ObjectInstanceSize[0]));
+            classStatistics.add(cts);
         });
 
-        Collections.sort(classTotalSizes);
-        Collections.reverse(classTotalSizes);
+        Collections.sort(classStatistics);
+        Collections.reverse(classStatistics);
 
-        return classTotalSizes.toArray(new ClassTotalSize[0]);
+        final ClassStatistics[] classStats = classStatistics.toArray(new ClassStatistics[0]);
+        return new DeepSize() {
+            @Override
+            public long getDeepSize() {
+                return deepSize;
+            }
+
+            @Override
+            public ClassStatistics[] getClassStatisticss() {
+                return classStats;
+            }
+        };
     }
 }
