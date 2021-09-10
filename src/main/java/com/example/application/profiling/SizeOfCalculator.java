@@ -5,6 +5,8 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.server.VaadinSession;
 import org.ehcache.sizeof.SizeOf;
 import org.ehcache.sizeof.VisitorListener;
+import org.ehcache.sizeof.filters.SizeOfFilter;
+import org.ehcache.sizeof.impl.PassThroughFilter;
 
 import java.util.*;
 import java.util.logging.Level;
@@ -20,18 +22,24 @@ public class SizeOfCalculator {
 
     private final HashMap<String, List<InstanceStatistics>> classnameToInstanceSizes = new HashMap<>();
 
-    private SizeOfCalculator(Object rootRef, String... fqClassnamePrefixes) {
+    private final SizeOf sizeOf;
+
+    private SizeOfCalculator(Object rootRef, SizeOfFilter sizeOfFilter, String... fullyQualifiedClassnamePrefixes) {
         this.rootRef = rootRef;
-        this.prefixes = fqClassnamePrefixes;
+        this.prefixes = fullyQualifiedClassnamePrefixes;
         this.filteringVisitorListener = new FilteringVisitorListener();
+
+        this.sizeOf = SizeOf.newInstance(true, true, sizeOfFilter);
+        //this.sizeOf = new AgentSizeOf(sizeOfFilter, true, true); // filters can be passed here
+        //this.sizeOf = new UnsafeSizeOf(sizeOfFilter, true, true); // filters can be passed here
+        //this.sizeOf = new ReflectionSizeOf(sizeOfFilter, true, true); // filters can be passed here
+    }
+
+    private SizeOfCalculator(Object rootRef, String... fullyQualifiedClassnamePrefixes) {
+        this(rootRef, new PassThroughFilter(), fullyQualifiedClassnamePrefixes);
     }
 
     Logger logger = Logger.getLogger(SizeOfCalculator.class.getName());
-
-    private final SizeOf sizeOf = SizeOf.newInstance(true, true); // filters can be passed here
-    //private final SizeOf sizeOf = new AgentSizeOf(new PassThroughFilter(),true, true); // filters can be passed here
-    //private final SizeOf sizeOf = new UnsafeSizeOf(new PassThroughFilter(),true, true); // filters can be passed here
-    //private final SizeOf sizeOf = new ReflectionSizeOf(new PassThroughFilter(),true, true); // filters can be passed here
 
     public interface InstanceStatistics {
         String getDescription();
