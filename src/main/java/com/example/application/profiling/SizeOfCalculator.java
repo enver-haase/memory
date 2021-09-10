@@ -18,7 +18,7 @@ public class SizeOfCalculator {
     private final String[] prefixes;
     private final FilteringVisitorListener filteringVisitorListener;
 
-    private final HashMap<String, List<ObjectInstanceSize>> classnameToInstanceSizes = new HashMap<>();
+    private final HashMap<String, List<InstanceStatistics>> classnameToInstanceSizes = new HashMap<>();
 
     private SizeOfCalculator(Object rootRef, String... fqClassnamePrefixes) {
         this.rootRef = rootRef;
@@ -33,27 +33,25 @@ public class SizeOfCalculator {
     //private final SizeOf sizeOf = new UnsafeSizeOf(new PassThroughFilter(),true, true); // filters can be passed here
     //private final SizeOf sizeOf = new ReflectionSizeOf(new PassThroughFilter(),true, true); // filters can be passed here
 
-    public interface ObjectInstanceSize extends Comparable<ObjectInstanceSize> {
+    public interface InstanceStatistics {
         String getDescription();
-        long getDeepSize();
     }
 
     public interface ClassStatistics extends Comparable<ClassStatistics> {
         String getClassName();
-        long getCumulatedSize();
-        ObjectInstanceSize[] getObjectInstanceSizes();
+        InstanceStatistics[] getInstanceStatistics();
     }
 
     public interface DeepSize {
         long getDeepSize();
-        ClassStatistics[] getClassStatisticss();
+        ClassStatistics[] getClassStatistics();
     }
 
     private static class ClsSize implements ClassStatistics {
         private final String className;
-        private final ObjectInstanceSize[] objectInstanceSizes;
+        private final InstanceStatistics[] objectInstanceSizes;
 
-        ClsSize(String className, ObjectInstanceSize[] objectInstanceSizes) {
+        ClsSize(String className, InstanceStatistics[] objectInstanceSizes) {
             this.className = className;
             this.objectInstanceSizes = objectInstanceSizes;
         }
@@ -64,47 +62,26 @@ public class SizeOfCalculator {
         }
 
         @Override
-        public long getCumulatedSize() {
-            long retVal = 0;
-            for (ObjectInstanceSize ois : objectInstanceSizes) {
-                retVal += ois.getDeepSize();
-            }
-            return retVal;
-        }
-
-        @Override
-        public ObjectInstanceSize[] getObjectInstanceSizes() {
+        public InstanceStatistics[] getInstanceStatistics() {
             return objectInstanceSizes;
         }
 
         @Override
         public int compareTo(ClassStatistics o) {
-            return Long.compare(this.getCumulatedSize(), o.getCumulatedSize());
+            return Long.compare(this.getInstanceStatistics().length, o.getInstanceStatistics().length);
         }
     }
 
-    private static class ObjSize implements ObjectInstanceSize {
+    private static class ObjStatistics implements InstanceStatistics {
         private final String desc;
-        private final long size;
 
-        ObjSize(String description, long size) {
+        ObjStatistics(String description) {
             this.desc = description;
-            this.size = size;
         }
 
         @Override
         public String getDescription() {
             return desc;
-        }
-
-        @Override
-        public long getDeepSize() {
-            return size;
-        }
-
-        @Override
-        public int compareTo(ObjectInstanceSize o) {
-            return Long.compare(size, o.getDeepSize());
         }
     }
 
@@ -122,9 +99,9 @@ public class SizeOfCalculator {
                     // reached (must be so that e.g. a Vaadin UI would not be crawled upwards to its Vaadin Session,
                     // in order to not read all the other Vaadin UIs, too -- assuming one would want to measure only
                     // the size of one UI.
-                    // We use shallow size for the time being.
-                    ObjectInstanceSize ois = new ObjSize(getDescription(object), /*sizeOf.deepSizeOf(object)*/ size);
-                    List<ObjectInstanceSize> others = SizeOfCalculator.this.classnameToInstanceSizes.computeIfAbsent(className, k -> new ArrayList<>());
+                    // We leave the size out of the equation for now, and focus on the number of instances we can find instead.
+                    InstanceStatistics ois = new ObjStatistics(getDescription(object));
+                    List<InstanceStatistics> others = SizeOfCalculator.this.classnameToInstanceSizes.computeIfAbsent(className, k -> new ArrayList<>());
                     others.add(ois);
                     logger.log(Level.FINER, "Found an instance of class "+className);
 
@@ -176,10 +153,7 @@ public class SizeOfCalculator {
 
         ArrayList<ClassStatistics> classStatistics = new ArrayList<>();
         classnameToInstanceSizes.forEach((className, objectInstanceSizes) -> {
-            Collections.sort(objectInstanceSizes); // sort
-            Collections.reverse(objectInstanceSizes); // sort
-
-            ClassStatistics cts = new ClsSize(className, objectInstanceSizes.toArray(new ObjectInstanceSize[0]));
+            ClassStatistics cts = new ClsSize(className, objectInstanceSizes.toArray(new InstanceStatistics[0]));
             classStatistics.add(cts);
         });
 
@@ -194,7 +168,7 @@ public class SizeOfCalculator {
             }
 
             @Override
-            public ClassStatistics[] getClassStatisticss() {
+            public ClassStatistics[] getClassStatistics() {
                 return classStats;
             }
         };

@@ -40,12 +40,12 @@ public class HelloWorldView extends HorizontalLayout {
             System.gc();
             VaadinService service = VaadinService.getCurrent();
             SizeOfCalculator.DeepSize deepSize = SizeOfCalculator.calculateSizesOf(service, service.getClass().getName(), "com.example.application.view", "com.vaadin.flow.spring.SpringVaadinSession", "com.vaadin.flow.component.internal.JavaScriptBootstrapUI");
-            SizeOfCalculator.ClassStatistics[] totals = deepSize.getClassStatisticss();
+            SizeOfCalculator.ClassStatistics[] totals = deepSize.getClassStatistics();
             logger.log(Level.INFO, "Memory footprint (deep size of "+getDescription(service)+" is "+deepSize.getDeepSize()+"):");
             for (SizeOfCalculator.ClassStatistics total : totals) {
-                logger.log(Level.INFO, "Class "+total.getClassName()+" x"+total.getObjectInstanceSizes().length+" instances, total memory: "+total.getCumulatedSize() );
-                for (SizeOfCalculator.ObjectInstanceSize ois : total.getObjectInstanceSizes()){
-                    logger.log(Level.INFO, "---Instance "+ois.getDescription()+", size "+ois.getDeepSize());
+                logger.log(Level.INFO, "Class "+total.getClassName()+" x"+total.getInstanceStatistics().length+" instances.");
+                for (SizeOfCalculator.InstanceStatistics ois : total.getInstanceStatistics()){
+                    logger.log(Level.INFO, "---Instance "+ois.getDescription());
                 }
             }
             logMemDump.setEnabled(true);
