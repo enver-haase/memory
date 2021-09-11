@@ -72,19 +72,25 @@ public class HelloWorldView extends VerticalLayout {
 
         VaadinService service = VaadinService.getCurrent();
         SizeOfCalculator.DeepSize deepSize = SizeOfCalculator.calculateSizesOf(service, service.getClass().getName(), "com.example.application.view", "com.vaadin.flow.spring.SpringVaadinSession", "com.vaadin.flow.component.internal.JavaScriptBootstrapUI");
-        retVal.append("Memory footprint (deep size of ").append(getDescription(service)).append(" is ").append(deepSize.getDeepSize()).append(":\n");
+        retVal.append("Memory footprint: deep size of ").append(getDescription(service)).append(" is ").append(deepSize.getDeepSize()).append(".\n\n");
 
+        retVal.append("Vaadin:\n");
         VaadinVisitor.VaadinStatistics vaadinStatistics = deepSize.getVaadinStatistics();
         int numCurrentComponents = vaadinStatistics.getComponentsOfCurrentUI().size();
         retVal.append("Current UI has ").append(numCurrentComponents).append(" Vaadin components.\n");
         int numCurrentUIs = vaadinStatistics.getUIsOfCurrentSession().size();
         retVal.append("Current VaadinSession has ").append(numCurrentUIs).append(" UIs.\n");
+        int numCurrentAttribs = vaadinStatistics.getAttributesOfCurrentSession().size();
+        retVal.append("Current VaadinSession has ").append(numCurrentAttribs).append(" attributes:\n");
+        vaadinStatistics.getAttributesOfCurrentSession().stream().sorted().forEachOrdered(attrib -> retVal.append("  ").append(attrib).append("\n"));
+
+        retVal.append("\n");
         int numOrphanedComponents = vaadinStatistics.getOrphanedComponents().size();
         if (numOrphanedComponents == 0){
-            retVal.append("No orphaned components (not attached to any UI) found.\n");
+            retVal.append("No orphaned components (not attached to any UI) found.\n\n");
         }
         else{
-            retVal.append("WARNING: ").append(numOrphanedComponents).append(" ORPHANED COMPONENT(S) (not attached to any UI) FOUND!\n");
+            retVal.append("WARNING: ").append(numOrphanedComponents).append(" ORPHANED COMPONENT(S) (not attached to any UI) FOUND!\n\n");
         }
 
         Set<String> sessions = vaadinStatistics.getSession2UIsMap().keySet();
@@ -95,8 +101,9 @@ public class HelloWorldView extends VerticalLayout {
                 retVal.append("  ").append(ui).append(": ").append(vaadinStatistics.getUI2ComponentsMap().get(ui).size()).append(" components.\n");
             }
         }
-        retVal.append("\n");
+        retVal.append("\n\n");
 
+        retVal.append("Other things of interest:\n");
         SizeOfCalculator.ClassStatistics[] totals = deepSize.getClassStatistics();
         for (SizeOfCalculator.ClassStatistics total : totals) {
             retVal.append("Class ").append(total.getClassName()).append(" x").append(total.getInstanceStatistics().length).append(" instances.\n");
