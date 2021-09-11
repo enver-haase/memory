@@ -18,6 +18,7 @@ public class SizeOfCalculator {
 
     private final Object rootRef;
     private final String[] prefixes;
+    private final VaadinVisitor vaadinVisitor;
     private final FilteringVisitorListener filteringVisitorListener;
 
     private final HashMap<String, List<InstanceStatistics>> classnameToInstanceSizes = new HashMap<>();
@@ -27,6 +28,7 @@ public class SizeOfCalculator {
     private SizeOfCalculator(Object rootRef, SizeOfFilter sizeOfFilter, String... fullyQualifiedClassnamePrefixes) {
         this.rootRef = rootRef;
         this.prefixes = fullyQualifiedClassnamePrefixes;
+        this.vaadinVisitor = new VaadinVisitor();
         this.filteringVisitorListener = new FilteringVisitorListener();
 
         this.sizeOf = SizeOf.newInstance(true, true, sizeOfFilter);
@@ -53,6 +55,7 @@ public class SizeOfCalculator {
     public interface DeepSize {
         long getDeepSize();
         ClassStatistics[] getClassStatistics();
+        VaadinVisitor.VaadinStatistics getVaadinStatistics();
     }
 
     private static class ClsSize implements ClassStatistics {
@@ -97,6 +100,8 @@ public class SizeOfCalculator {
     private class FilteringVisitorListener implements VisitorListener {
         public void visited(Object object, long size) {
 
+            SizeOfCalculator.this.vaadinVisitor.accept(object);
+
             final String className = object.getClass().getName();
             logger.log(Level.FINEST, "Testing an instance of class "+object.getClass().getName());
             for (String prefix : SizeOfCalculator.this.prefixes) {
@@ -113,35 +118,8 @@ public class SizeOfCalculator {
                     others.add(ois);
                     logger.log(Level.FINER, "Found an instance of class "+className);
 
-
-                    if (object instanceof Component){
-                        Component component = (Component) object;
-                        Optional<UI> ui = component.getUI();
-                        final String uiDesc;
-                        uiDesc = ui.map(ObjDescription::getDescription).orElse("(not attached to a UI)");
-
-                        final VaadinSession session;
-                        session = ui.map(UI::getSession).orElse(null);
-                        String vsDesc = (session == null? "(not attached to a VaadinSession)" : getDescription(session));
-
-                        logger.log(Level.FINE, "Found a Component instance: "+getDescription(object)+", UI: "+uiDesc+", VaadinSession: "+vsDesc);
-                    }
-
-                    //break;
-                    return; // not break: if we printed the UI as a component, that's sufficient
+                    break;
                 }
-            }
-
-            if (object instanceof UI){
-                UI ui = (UI) object;
-                final VaadinSession session;
-                session = ui.getSession();
-                String vsDesc = (session == null? "(not attached to a VaadinSession)" : getDescription(ui.getSession()));
-                logger.log(Level.WARNING, "Found a Vaadin UI instance "+getDescription(object)+" outside your class name prefixes, suggest you add this: "+object.getClass().getName()+", Session: "+vsDesc);
-            }
-
-            if (object instanceof VaadinSession){
-                logger.log(Level.WARNING, "Found a VaadinSession instance "+getDescription(object)+" outside your class name prefixes, suggest you add this: "+object.getClass().getName());
             }
         }
     }
@@ -178,6 +156,11 @@ public class SizeOfCalculator {
             @Override
             public ClassStatistics[] getClassStatistics() {
                 return classStats;
+            }
+
+            @Override
+            public VaadinVisitor.VaadinStatistics getVaadinStatistics() {
+                return SizeOfCalculator.this.vaadinVisitor.getVaadinStatistics();
             }
         };
     }
