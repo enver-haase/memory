@@ -95,7 +95,7 @@ public class HelloWorldView extends VerticalLayout {
 
         Set<String> sessions = vaadinStatistics.getSession2UIsMap().keySet();
         for (String session : sessions){
-            retVal.append(session).append(":\n");
+            retVal.append(session).append(" (").append(vaadinStatistics.getSession2AttribKeysMap().get(session).size()).append(" attributes").append(")").append(":\n");
             Set<String> uis = vaadinStatistics.getSession2UIsMap().get(session);
             for (String ui : uis){
                 retVal.append("  ").append(ui).append(": ").append(vaadinStatistics.getUI2ComponentsMap().get(ui).size()).append(" components.\n");
